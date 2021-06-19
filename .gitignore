@@ -1,0 +1,4 @@
+local-php-security-checker
+working_dir/*
+!working_dir/.gitignore
+.env
