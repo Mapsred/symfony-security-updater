@@ -34,22 +34,21 @@ function check_error() {
   fi
 
   error_message=$(echo "$1" | jq -r '.message?' | sed 's/"// ')
-  if [ "$error_message" != "" ]; then
+  if [ "$error_message" != "" ] && [ "$error_message" != null ]; then
     echo "Failed to $2 using GitLab API : $error_message"
-    exit
+    exit 1
   fi
 }
 
 function get_repository_id() {
-  projects=$(curl --header "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects?search=$project")
+  projects=$(curl -s --header "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" "https://gitlab.com/api/v4/projects?search=$project")
   check_error "$projects" "fetch the repository id"
 
   project_id=$(echo "$projects" | jq --arg name "$repository" '.[] | select(.ssh_url_to_repo == $name)' | jq .id)
-  echo "$project_id"
 }
 
 function create_merge_request() {
-  merge_request_query=$(curl --location --request POST "https://gitlab.com/api/v4/projects/$project_id/merge_requests" \
+  merge_request_query=$(curl -s --location --request POST "https://gitlab.com/api/v4/projects/$project_id/merge_requests" \
     --header "PRIVATE-TOKEN: $GITLAB_PRIVATE_TOKEN" \
     --header 'Content-Type: application/json' \
     --data-raw '{
@@ -61,6 +60,7 @@ function create_merge_request() {
     }')
 
   check_error "$merge_request_query" "create the merge request"
+  echo "Merge Request for project $project : $(echo "$merge_request_query" | jq -r .web_url)"
 }
 
 function scan_repositories() {
